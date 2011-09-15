@@ -164,7 +164,7 @@ var Calc = {};
 
     parseExpression = function (tokens) {
         var left = parseTerm(tokens),
-            operator = tokens.lengt > 0 && tokens[0].type,
+            operator = tokens.length > 0 && tokens[0].type,
             right;
 
         switch (operator) {
