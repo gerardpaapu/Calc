@@ -38,6 +38,7 @@ var Calc = {};
         readToken,
         assert,
         type,
+        toString,
 
         parse,
         parseCalc,
@@ -276,7 +277,8 @@ var Calc = {};
             :  val == null  ? String(val)
             :  toString.call(val).slice(8, -1).toLowerCase();
     };
-    
+
+    toString = {}.toString;
 }.call(null));
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = Calc;
