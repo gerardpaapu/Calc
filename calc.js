@@ -153,8 +153,8 @@ var Calc = {};
         assert(tokens[0].type === TokenTypes.NUMBER, 'Unexpected: ' + tokens[0].type);
         units.push(Number(tokens.shift().value));
 
-        while (tokens.length > 0 &&
-               tokens[0].type === TokenTypes.COMMA) {
+        while (tokens.length > 0) {
+            assert(tokens.shift() === TokenTypes.COMMA);
             assert(tokens[0].type === TokenTypes.NUMBER);
             units.push(tokens.shift().value);
         } 
