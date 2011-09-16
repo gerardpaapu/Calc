@@ -14,20 +14,6 @@
 // expr     := term '+' term | term '-' term | term
 // term     := factor 'x' term | factor '%' term | factor
 // factor   := number | reference | '(' expr ')' 
-//
-// Examples
-// --------
-//
-// These are examples of inputs compiled to javascript.
-//
-// ($area % 0.96) x 1.05 units 0.96
-// function (env) { return ((env.area/0.96)*1.05); }
-//
-// $area x 0.05
-// function (env) { return (env.area*0.05); }
-//
-// (2 x $centreline_length) x (2 x $width)
-// function (env) { return ((2*env.centreline_length)*(2*env.width)); }
 /*jshint curly: false */
 var Calc = {};
 (function () {
@@ -47,12 +33,7 @@ var Calc = {};
         parseQuantity,
         parseExpression,
         parseTerm,
-        parseFactor,
-
-        compileCalc,
-        compileExpression,
-        compileApp,
-        compileOp;
+        parseFactor;
 
     Calc.TokenTypes = TokenTypes = {
         OPEN_PAREN: 'OPEN_PAREN',
@@ -69,7 +50,7 @@ var Calc = {};
     }; 
 
     SIMPLE_TOKENS = {
-        DIVIDE_OP: '%',
+        DIVIDE_OP: '/',
         MULTIPLY_OP: 'x',
         COMMA: ',',
         ADD_OP: '+',
@@ -235,6 +216,10 @@ var Calc = {};
         }
     };
 
+    var compileCalc,
+        compileExpression,
+        compileApp,
+        compileOp;
 
     Calc.compile = function (str) {
         var tree = Calc.parse(str);
@@ -303,6 +288,95 @@ var Calc = {};
         }
     };
 
+    var renderCalc,
+        evalExpression,
+        evalApp,
+        split; 
+
+    split = function (target, components, unit) {
+        var max = components.length,
+            result = [],
+            remainder = target,
+            i, n, v, k;
+
+        components = components.slice();
+        components.sort(function (a, b) { return b - a; }); 
+
+        for (i = 0; i < max; i++) {
+            n = components[i];
+            k = unit ? (String(n) + ' ' + unit) : String(n);
+
+            if (i < max - 1) {
+                v = Math.floor(remainder / n);
+                remainder %= n;
+            } else {
+                v = Math.ceil(remainder / n);
+            }
+
+            if (v !== 0) {
+                result.push({ units: k, value: v});
+            }
+        }
+
+        return result;
+    };
+
+    Calc.render = renderCalc = function (src, env) {
+        /*jshint eqnull: true */
+        var tokens = tokenize(src),
+            tree = Calc.parseTokens(tokens),
+            value = evalExpression(tree.expression, env),
+            components = [],
+            unit, i, qtys;
+
+        if (tree.quantities == null)  {
+            return [{ value: value }];
+        } else if (!tree.quantities[0].value) {
+            return [{ value: value, units: tree.quantities[0].units } ]; 
+        } else {
+            i = tree.quantities.length;
+            unit = tree.quantities[0].units;
+            qtys = [];
+
+            while (i--) {
+                assert(tree.quantities[i].units === unit, 'You can\'t mix units');
+                qtys[i] = tree.quantities[i].value;
+            }
+            
+            return split(value, qtys, unit);
+        }
+    }; 
+
+    evalExpression = function (exp, env) {
+        switch (type(exp)) {
+            case "number": return exp;
+            case "array": return evalApp(exp, env);
+        }
+    };
+
+    evalApp = function (exp, env) {
+        var code = exp[0],
+            left = exp[1],
+            right = exp[2];
+
+        switch (code) {
+            case TokenTypes.REFERENCE:
+                return env[left.slice(1)];
+
+            case TokenTypes.MULTIPLY_OP:
+                return evalExpression(left, env) * evalExpression(right, env);
+
+            case TokenTypes.ADD_OP:
+                return evalExpression(left, env) + evalExpression(right, env);
+
+            case TokenTypes.SUBTRACT_OP: 
+                return evalExpression(left, env) - evalExpression(right, env);
+
+            case TokenTypes.DIVIDE_OP:
+                return evalExpression(left, env) / evalExpression(right, env);
+        }
+    };
+
     assert = function (test, message) {
         if (!test) {
             throw new Error(message || "Assertion failed");
@@ -316,7 +390,9 @@ var Calc = {};
     };
 
     toString = {}.toString;
+
 }.call(null));
+
 /*globals module: false */
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = Calc;

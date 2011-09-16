@@ -23,8 +23,3 @@ function split(target, components, unit) {
 
     return result;
 }
-
-var i = 0, max = 101;
-for (i = 0; i < max; i++) {
-    console.log(split(i, [1, 2, 4], 'cats'));
-}
