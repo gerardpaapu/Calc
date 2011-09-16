@@ -8,11 +8,12 @@
 //      $area x 0.05 
 //      (2 x $centreline_length) x (2 x $width)
 //
-// calc     := exp 'units' unitlist | exp
-// unitlist := number ',' unitlist | number 
-// expr     := term | term '+' term | term '-' term 
-// term     := factor | factor 'x' factor | factor '%' factor
-// factor   := number | '(' expr ')' 
+// calc     := exp 'in' qtys | exp
+// qtys     := qty ',' qtys | qty  
+// qty      := number unit | unit
+// expr     := term '+' term | term '-' term | term
+// term     := factor 'x' term | factor '%' term | factor
+// factor   := number | reference | '(' expr ')' 
 //
 // Examples
 // --------
@@ -27,7 +28,7 @@
 //
 // (2 x $centreline_length) x (2 x $width)
 // function (env) { return ((2*env.centreline_length)*(2*env.width)); }
-
+/*jshint curly: false */
 var Calc = {};
 (function () {
     var TokenTypes,
@@ -42,10 +43,16 @@ var Calc = {};
 
         parse,
         parseCalc,
-        parseUnitlist,
+        parseUnits,
+        parseQuantity,
         parseExpression,
         parseTerm,
-        parseFactor;
+        parseFactor,
+
+        compileCalc,
+        compileExpression,
+        compileApp,
+        compileOp;
 
     Calc.TokenTypes = TokenTypes = {
         OPEN_PAREN: 'OPEN_PAREN',
@@ -57,6 +64,7 @@ var Calc = {};
         ADD_OP: 'ADD_OP',
         SUBTRACT_OP: 'SUBTRACT_OP',
         UNITS_KW: 'UNIT_KW',
+        UNIT: 'UNIT', 
         COMMA: 'COMMA'
     }; 
 
@@ -68,12 +76,13 @@ var Calc = {};
         SUBTRACT_OP: '-',
         OPEN_PAREN: '(',
         CLOSE_PAREN: ')',
-        UNITS_KW: 'units'
+        UNITS_KW: 'in'
     };
 
     PATTERNS = {
         NUMBER: /^-?(0|([1-9]\d*))(\.\d+)?((e|E)(\+|\-)\d+)?/,
-        REFERENCE: /^\$(\w+)/
+        REFERENCE: /^\$(\w+)/,
+        UNIT: /^[a-z]+\d?/
     };
 
     Calc.tokenize = tokenize = function (str) {
@@ -132,34 +141,45 @@ var Calc = {};
 
     parseCalc = function (tokens) {
         var expr = parseExpression(tokens), 
+            unit = null,
             unitlist = null;
 
-        if (tokens.length) {
-            assert(tokens[0].type === TokenTypes.UNITS_KW, 'expected "unit" keyword');
-            unitlist = parseUnitList(tokens);
+        if (tokens.length > 0) {
+            assert(tokens.shift().type === TokenTypes.UNITS_KW, 'expected "in" keyword');
+            unitlist = [];
+            unitlist.push(parseQuantity( tokens ));
+        }
+
+        while (tokens.length > 0) {
+            assert(tokens.shift().type === TokenTypes.COMMA, 'expected comma');
+            unitlist.push( parseQuantity(tokens) );
         }
 
         return {
             expression: expr,
-            units: unitlist
+            quantities: unitlist
         };
     };
 
-    parseUnitList = function (tokens) {
-        var units = [];
-        
-        assert(tokens[0].type === TokenTypes.UNITS_KW, 'Unexpected: ' + tokens[0].type);
-        tokens.shift();
-        assert(tokens[0].type === TokenTypes.NUMBER, 'Unexpected: ' + tokens[0].type);
-        units.push(Number(tokens.shift().value));
+    parseQuantity = function (tokens) {
+        var qty = { units: null, value: null },
+            first = tokens.shift(),
+            second;
 
-        while (tokens.length > 0) {
-            assert(tokens.shift() === TokenTypes.COMMA);
-            assert(tokens[0].type === TokenTypes.NUMBER);
-            units.push(tokens.shift().value);
+        switch (first.type) {
+            case TokenTypes.NUMBER:
+                second = tokens.shift(); 
+                return {
+                    value: first.value,
+                    units: second.value
+                };
+
+            case TokenTypes.UNIT:
+                return { units: first.value };
+
+            default:
+                throw new Error('Quantity Expected');
         } 
-
-        return units;
     };
 
     parseExpression = function (tokens) {
@@ -170,7 +190,7 @@ var Calc = {};
         switch (operator) {
             case TokenTypes.ADD_OP:
             case TokenTypes.SUBTRACT_OP:
-                tokens.shift(); // consume the operator
+                tokens.shift();
                 right = parseTerm(tokens);
                 return [operator, left, right];
 
@@ -181,14 +201,14 @@ var Calc = {};
 
     parseTerm = function (tokens) {
         var left = parseFactor(tokens),
-            operator = tokens[0].type,
+            operator = tokens.length > 0 && tokens[0].type,
             right;
 
         switch (operator) {
             case TokenTypes.MULTIPLY_OP:
             case TokenTypes.DIVIDE_OP:
                 tokens.shift();
-                right = parseFactor(tokens);
+                right = parseTerm(tokens);
                 return [operator, left, right];
 
             default:
@@ -211,21 +231,22 @@ var Calc = {};
                 return value;
 
             default: 
-                throw new Error(tokens[0].type);
+                throw new Error('Couldn\'t parse ' + tokens[0].type);
         }
     };
 
-    var compileCalc,
-        compileExpression,
-        compileApp;
 
     Calc.compile = function (str) {
-        tree = Calc.parse(str);
+        var tree = Calc.parse(str);
         return compileCalc(tree);
     };
 
     compileCalc = function (tree) {
-        return ["function (env) { return ", compileExpression(tree.expression), "; }"].join('');
+        if (tree.quantities === null) {  
+            return ['function (env) { return ', compileExpression(tree.expression), '; }'].join('');
+        } else {
+            return ['function (env) { return ', compileExpression(tree.expression), ' + "', tree.quantities[0].units, '"; }'].join('');
+        }
     };
 
     compileExpression = function (exp) {
@@ -273,13 +294,13 @@ var Calc = {};
 
     type = function (val) {
         /*jshint eqnull: true */
-        return val == global ? "global"
-            :  val == null  ? String(val)
+        return val == null  ? String(val)
             :  toString.call(val).slice(8, -1).toLowerCase();
     };
 
     toString = {}.toString;
 }.call(null));
+/*globals module: false */
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = Calc;
 }
