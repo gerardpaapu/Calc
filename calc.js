@@ -242,10 +242,27 @@ var Calc = {};
     };
 
     compileCalc = function (tree) {
+        var i, max, unit, qtys;
+
         if (tree.quantities === null) {  
-            return ['function (env) { return ', compileExpression(tree.expression), '; }'].join('');
+            return ['function (env) { return [{ value: ', compileExpression(tree.expression), ' }]; }'].join('');
+        } else if (tree.quantities[0].value == null) {
+            return ['function (env) { return [{ units: ', tree.quantities[0].units, ', value: ', compileExpression(tree.expression), ' }]; }'].join('');
         } else {
-            return ['function (env) { return ', compileExpression(tree.expression), ' + "', tree.quantities[0].units, '"; }'].join('');
+            i = tree.quantities.length;
+            unit = tree.quantities[0].unit;
+            qtys = [];
+
+            while (i--) {
+                assert(tree.quantities[i].unit === unit, 'You can\'t mix units');
+                qtys[i] = tree.quantities[i].value;
+            }
+
+            return [
+                'function (env) {',
+                ' return split(', compileExpression(tree.expression), ', [', qtys.join(', '), '], ', unit || 'null', ');',
+                '}'
+            ].join('');
         }
     };
 

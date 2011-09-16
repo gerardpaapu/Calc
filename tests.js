@@ -12,7 +12,6 @@ var Calc = require('./calc.js');
     '(5 + 7) x 10'
 ].forEach(function (src) {
     try {
-        console.log( src );
         console.log( Calc.compile(src) );
     } catch (err) {
         console.log('failed to parse', src, err.message);
