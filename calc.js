@@ -200,7 +200,7 @@ var Calc = {};
     parseFactor = function (tokens) {
         switch (tokens[0].type) {
             case TokenTypes.REFERENCE:
-                return [TokenTypes.REFERENCE, tokens.shift().value];
+                return [TokenTypes.REFERENCE, tokens.shift().value.slice(1)];
 
             case TokenTypes.NUMBER:
                 return Number(tokens.shift().value);
@@ -216,82 +216,23 @@ var Calc = {};
         }
     };
 
-    var compileCalc,
-        compileExpression,
-        compileApp,
-        compileOp;
-
-    Calc.compile = function (str) {
-        var tree = Calc.parse(str);
-        return compileCalc(tree);
-    };
-
-    compileCalc = function (tree) {
-        var i, max, unit, qtys;
-
-        if (tree.quantities === null) {  
-            return ['function (env) { return [{ value: ', compileExpression(tree.expression), ' }]; }'].join('');
-        } else if (tree.quantities[0].value == null) {
-            return ['function (env) { return [{ units: ', tree.quantities[0].units, ', value: ', compileExpression(tree.expression), ' }]; }'].join('');
-        } else {
-            i = tree.quantities.length;
-            unit = tree.quantities[0].unit;
-            qtys = [];
-
-            while (i--) {
-                assert(tree.quantities[i].unit === unit, 'You can\'t mix units');
-                qtys[i] = tree.quantities[i].value;
-            }
-
-            return [
-                'function (env) {',
-                ' return split(', compileExpression(tree.expression), ', [', qtys.join(', '), '], ', unit || 'null', ');',
-                '}'
-            ].join('');
-        }
-    };
-
-    compileExpression = function (exp) {
-        switch (type(exp)) {
-            case "number":
-                return exp.toString(10);
-
-            case "array":
-                return compileApp(exp);
-        }
-    };
-
-    compileOp = function (op, left, right) {
-        return [ '(', compileExpression(left), op, compileExpression(right), ')' ].join('');   
-    };
-
-    compileApp = function (exp) {
-        var code = exp[0],
-            left = exp[1],
-            right = exp[2];
-
-        switch (code) {
-            case TokenTypes.REFERENCE:
-                return 'env.' + left.slice(1);
-
-            case TokenTypes.MULTIPLY_OP:
-                return compileOp('*', left, right);
-
-            case TokenTypes.ADD_OP:
-                return compileOp('+', left, right);
-
-            case TokenTypes.SUBTRACT_OP: 
-                return compileOp('-', left, right);
-
-            case TokenTypes.DIVIDE_OP:
-                return compileOp('/', left, right);
-        }
-    };
-
     var renderCalc,
         evalExpression,
         evalApp,
-        split; 
+        vars,
+        split,
+        indexOf,
+        joinSets;
+
+    Calc.vars = function (src) {
+        return vars( Calc.parse(src).expression );
+    };
+
+    vars = function (tree) {
+        return type(tree) != 'array' ? []
+            :  tree[0] === TokenTypes.REFERENCE ? [ tree[1] ]
+            :  joinSets(vars(tree[1]), vars(tree[2]));
+    };
 
     split = function (target, components, unit) {
         var max = components.length,
@@ -315,6 +256,19 @@ var Calc = {};
 
             if (v !== 0) {
                 result.push({ units: k, value: v });
+            }
+        }
+
+        return result;
+    };
+
+    joinSets = function (left, right) {
+        var result = left.slice(),
+            i = right.length;
+
+        while (i--) {
+            if (indexOf.call(result, right[i]) == -1) {
+                result.push(right[i]); 
             }
         }
 
@@ -349,7 +303,7 @@ var Calc = {};
     evalExpression = function (exp, env) {
         switch (type(exp)) {
             case "number": return exp;
-            case "array": return evalApp(exp, env);
+            case "array":  return evalApp(exp, env);
         }
     };
 
@@ -360,7 +314,7 @@ var Calc = {};
 
         switch (code) {
             case TokenTypes.REFERENCE:
-                return env[left.slice(1)];
+                return env[left];
 
             case TokenTypes.MULTIPLY_OP:
                 return evalExpression(left, env) * evalExpression(right, env);
@@ -387,8 +341,18 @@ var Calc = {};
             :  toString.call(val).slice(8, -1).toLowerCase();
     };
 
-    toString = {}.toString;
+    indexOf = [].indexOf || function (needle) {
+        var i, max = this.length;
+        for (i = 0; i < max; i++) {
+            if (i in this && this[i] === needle) {
+                return i;
+            }
+        }
 
+        return -1;
+    };
+
+    toString = {}.toString;
 }.call(null));
 
 /*globals module: false */
