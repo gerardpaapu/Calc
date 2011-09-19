@@ -57,11 +57,11 @@ var Calc = {};
     };
 
     readToken = function (tokens, str, i) {
-        var char, head, match, slice, key, end;
+        var ch, head, match, slice, key, end;
 
-        char = str.charAt(i);
+        ch = str.charAt(i);
 
-        if (char == ' ' || char == '\t' || char == '\n') {
+        if (ch == ' ' || ch == '\t' || ch == '\n') {
             return i + 1;
         }
 
@@ -90,7 +90,7 @@ var Calc = {};
             }
         }
 
-        throw new Error("Couldn't tokenize " + str + " @ " + i + "'" + char + "'");
+        throw new Error("Couldn't tokenize " + str + " @ " + i + "'" + ch + "'");
     };
 
     Calc.parse = parse = function (str) {
