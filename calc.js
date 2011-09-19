@@ -180,6 +180,8 @@ var Calc = {};
     };
 
     parseFactor = function (tokens) {
+        var value;
+
         switch (tokens[0].type) {
             case TokenTypes.REFERENCE:
                 return tokens.shift().value.slice(1);
@@ -189,7 +191,7 @@ var Calc = {};
             
             case TokenTypes.OPEN_PAREN:
                 tokens.shift();
-                var value = parseExpression(tokens);
+                value = parseExpression(tokens);
                 assert(tokens.shift().type === TokenTypes.CLOSE_PAREN, 'expecting closing paren');
                 return value;
 
@@ -268,15 +270,20 @@ var Calc = {};
 
         if (tree.quantities == null)  {
             return [{ value: value }];
+
         } else if (!tree.quantities[0].value) {
-            return [{ value: value, units: tree.quantities[0].units }]; 
+            return [{
+                value: value,
+                units: tree.quantities[0].units
+            }]; 
+
         } else {
             i = tree.quantities.length;
             unit = tree.quantities[0].units;
             qtys = [];
 
             while (i--) {
-                assert(tree.quantities[i].units === unit, 'You can\'t mix units');
+                assert(tree.quantities[i].units === unit, "You can't mix units");
                 qtys[i] = tree.quantities[i].value;
             }
             
@@ -309,6 +316,9 @@ var Calc = {};
 
             case TokenTypes.DIVIDE_OP:
                 return evalExpression(left, env) / evalExpression(right, env);
+
+            default:
+                throw new Error("Unsupported Operation: " + code);
         }
     };
 
