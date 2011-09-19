@@ -1,5 +1,5 @@
 Calc
-----
+==
 
 A dumb/simple embeddable language for performing simple calculations
 It's so simple that you know it won't throw errors or run forever.
@@ -31,25 +31,25 @@ If there are multiple quantities, the result will be split among them
 e.g. '4.5 in 1.5, 3' -> '1 x 1.5', '1 x 3'
 
 Calc.render(src, variables) -> [{ value: Number, units: String? }, ...]
-==
+--
 
 Render the Calc program 'src' with the variables in 'variables', returns
 an array of { value: Number, unit: String or null }.
 
 Calc.vars(src) -> [ String, ... ]
-==
+--
 
 Returns a list of the variables that the Calc program 'src' requires to
 be defined.
 
 Calc.parse(src) -> Tree
-==
+--
 
 Returns the parse tree for the Calc program 'src', for debuggery or
 meta-whatever. 
 
 A BNF grammar for Calc:
-==
+--
 
     calc   := exp 'in' qtys | exp
     qtys   := qty ',' qtys | qty  
