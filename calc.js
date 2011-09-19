@@ -14,9 +14,9 @@
 // expr     := term '+' term | term '-' term | term
 // term     := factor 'x' term | factor '%' term | factor
 // factor   := number | reference | '(' expr ')' 
-/*jshint curly: false */
 var Calc = {};
 (function () {
+    /*jshint curly: false, eqnull: true */
     var TokenTypes,
         SIMPLE_TOKENS,
         KEYWORDS,
@@ -212,7 +212,7 @@ var Calc = {};
                 return value;
 
             default: 
-                throw new Error('Couldn\'t parse ' + tokens[0].type);
+                throw new Error("Couldn't parse " + tokens[0].type);
         }
     };
 
@@ -304,7 +304,7 @@ var Calc = {};
 
         for (i = 0; i < max; i++) {
             n = components[i];
-            k = unit ? (String(n) + ' ' + unit) : String(n);
+            k = unit ? (String(n) + unit) : String(n);
 
             if (i < max - 1) {
                 v = Math.floor(remainder / n);
@@ -314,7 +314,7 @@ var Calc = {};
             }
 
             if (v !== 0) {
-                result.push({ units: k, value: v});
+                result.push({ units: k, value: v });
             }
         }
 
@@ -322,7 +322,6 @@ var Calc = {};
     };
 
     Calc.render = renderCalc = function (src, env) {
-        /*jshint eqnull: true */
         var tokens = tokenize(src),
             tree = Calc.parseTokens(tokens),
             value = evalExpression(tree.expression, env),
@@ -332,7 +331,7 @@ var Calc = {};
         if (tree.quantities == null)  {
             return [{ value: value }];
         } else if (!tree.quantities[0].value) {
-            return [{ value: value, units: tree.quantities[0].units } ]; 
+            return [{ value: value, units: tree.quantities[0].units }]; 
         } else {
             i = tree.quantities.length;
             unit = tree.quantities[0].units;
@@ -384,7 +383,6 @@ var Calc = {};
     };
 
     type = function (val) {
-        /*jshint eqnull: true */
         return val == null  ? String(val)
             :  toString.call(val).slice(8, -1).toLowerCase();
     };
