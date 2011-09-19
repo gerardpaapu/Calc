@@ -223,14 +223,13 @@ var Calc = {};
         var max = components.length,
             result = [],
             remainder = target,
-            i, n, v, k;
+            i, n, v;
 
         components = components.slice();
         components.sort(function (a, b) { return b - a; }); 
 
         for (i = 0; i < max; i++) {
             n = components[i];
-            k = unit ? (String(n) + unit) : String(n);
 
             if (i < max - 1) {
                 v = Math.floor(remainder / n);
@@ -240,7 +239,7 @@ var Calc = {};
             }
 
             if (v !== 0) {
-                result.push({ units: k, value: v });
+                result.push({ units: String(n) + unit || '', value: v });
             }
         }
 
