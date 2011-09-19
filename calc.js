@@ -1,19 +1,3 @@
-// Calc
-// ----
-//
-// A dumb/simple embeddable language for performing simple calculations
-// It's so simple that you know it won't throw errors or run forever.
-//
-// e.g. ($area % 0.96) x 1.05 units 0.96
-//      $area x 0.05 
-//      (2 x $centreline_length) x (2 x $width)
-//
-// calc     := exp 'in' qtys | exp
-// qtys     := qty ',' qtys | qty  
-// qty      := number unit | unit
-// expr     := term '+' term | term '-' term | term
-// term     := factor 'x' term | factor '%' term | factor
-// factor   := number | reference | '(' expr ')' 
 var Calc = {};
 (function () {
     /*jshint curly: false, eqnull: true */
@@ -35,7 +19,7 @@ var Calc = {};
         parseTerm,
         parseFactor;
 
-    Calc.TokenTypes = TokenTypes = {
+    TokenTypes = {
         OPEN_PAREN: 'OPEN_PAREN',
         CLOSE_PAREN: 'CLOSE_PAREN',
         NUMBER: 'NUMBER',
@@ -66,7 +50,7 @@ var Calc = {};
         UNIT: /^[a-z]+\d?/
     };
 
-    Calc.tokenize = tokenize = function (str) {
+    tokenize = function (str) {
         var tokens = [], i;
         for (i = 0; i < str.length; i = readToken(tokens, str, i)) { }
         return tokens;
@@ -109,14 +93,12 @@ var Calc = {};
         throw new Error("Couldn't tokenize " + str + " @ " + i + "'" + char + "'");
     };
 
-    Calc.parse = function (str) {
-        var tokens = tokenize(str);
-        return Calc.parseTokens(tokens);
-    };
+    Calc.parse = parse = function (str) {
+        var tokens = tokenize(str),
+            tree = parseCalc(tokens);
 
-    Calc.parseTokens = function (tokens) {
-        var tree = parseCalc(tokens);
-        assert(tokens.length === 0, 'Should have consumed all the tokens');
+        assert(tokens.length === 0);
+
         return tree;
     };
 
@@ -200,7 +182,7 @@ var Calc = {};
     parseFactor = function (tokens) {
         switch (tokens[0].type) {
             case TokenTypes.REFERENCE:
-                return [TokenTypes.REFERENCE, tokens.shift().value.slice(1)];
+                return tokens.shift().value.slice(1);
 
             case TokenTypes.NUMBER:
                 return Number(tokens.shift().value);
@@ -225,13 +207,16 @@ var Calc = {};
         joinSets;
 
     Calc.vars = function (src) {
-        return vars( Calc.parse(src).expression );
+        return vars( parse(src).expression );
     };
 
     vars = function (tree) {
-        return type(tree) != 'array' ? []
-            :  tree[0] === TokenTypes.REFERENCE ? [ tree[1] ]
-            :  joinSets(vars(tree[1]), vars(tree[2]));
+        switch (type(tree)) {
+            case 'number': return [];
+            case 'string': return [ tree ];
+            default:
+                return joinSets(vars(tree[1]), vars(tree[2]));
+        }
     };
 
     split = function (target, components, unit) {
@@ -277,7 +262,7 @@ var Calc = {};
 
     Calc.render = renderCalc = function (src, env) {
         var tokens = tokenize(src),
-            tree = Calc.parseTokens(tokens),
+            tree = parseCalc(tokens),
             value = evalExpression(tree.expression, env),
             components = [],
             unit, i, qtys;
@@ -303,6 +288,7 @@ var Calc = {};
     evalExpression = function (exp, env) {
         switch (type(exp)) {
             case "number": return exp;
+            case "string": return env[exp];
             case "array":  return evalApp(exp, env);
         }
     };
@@ -313,9 +299,6 @@ var Calc = {};
             right = exp[2];
 
         switch (code) {
-            case TokenTypes.REFERENCE:
-                return env[left];
-
             case TokenTypes.MULTIPLY_OP:
                 return evalExpression(left, env) * evalExpression(right, env);
 

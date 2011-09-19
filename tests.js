@@ -12,8 +12,9 @@ var Calc = require('./calc.js');
     '(5 + 7) x 10'
 ].forEach(function (src) {
     console.log( src );
-    console.log( Calc.vars(src) );
-    console.log( Calc.render(src, {
+    console.log( 'parse tree:', Calc.parse(src) );
+    console.log( 'vars:', Calc.vars(src) );
+    console.log( 'render:', Calc.render(src, {
         area: 20,
         centreline_length: 34,
         width: 6,
